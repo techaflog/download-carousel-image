@@ -76,7 +76,13 @@
                         document.body.appendChild(zipLink);
                         zipLink.click();  // Trigger the download
                         zipLink.remove();
+
                         document.getElementById('status').textContent = 'Download complete!';
+
+                        // Wait a short delay and attempt to close the tab
+                        setTimeout(function() {
+                            window.close();  // Close the current tab if opened by JavaScript
+                        }, 2000);  // Adjust the delay as needed
                     });
                 }).catch(error => {
                     loadingSpinner.style.display = 'none';  // Hide spinner in case of error
