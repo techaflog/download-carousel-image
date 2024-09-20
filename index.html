@@ -12,30 +12,44 @@
 
     <script>
         window.onload = function() {
-            // Here, p1 will be the Glide template variable containing the URLs
-            const imageLinks = p1;  // Assuming 'p1' is where the column data is passed
+            const urlParams = new URLSearchParams(window.location.search);
+            const imageLinks = urlParams.get('fileUrls');  // Get the comma-separated image URLs from the query parameter
 
             if (imageLinks) {
+                console.log("Image URLs provided:", imageLinks); // Debugging log
+
                 const zip = new JSZip();  // Create a new JSZip instance
                 const urls = imageLinks.split(',');  // Split the URLs into an array
                 let promises = [];
 
                 // Iterate over each image URL and fetch it
                 urls.forEach((url, index) => {
-                    const fileName = url.trim().substring(url.lastIndexOf('/') + 1);  // Extract the filename
-                    const promise = fetch(url.trim())  // Remove spaces around URLs
-                        .then(response => response.blob())
+                    const trimmedUrl = url.trim();
+                    const fileName = trimmedUrl.substring(trimmedUrl.lastIndexOf('/') + 1);  // Extract the filename
+
+                    console.log(`Fetching image ${index + 1}:`, trimmedUrl);  // Debugging log
+
+                    const promise = fetch(trimmedUrl)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`Error fetching ${fileName}: ${response.statusText}`);
+                            }
+                            return response.blob();
+                        })
                         .then(blob => {
+                            console.log(`Successfully fetched ${fileName}`);  // Debugging log
                             zip.file(fileName, blob, { binary: true });  // Add each image to the zip
                         })
                         .catch(error => {
-                            console.error(`Error fetching file: ${url}`, error);
+                            console.error(`Error fetching file: ${trimmedUrl}`, error);
+                            document.getElementById('status').textContent = `Error fetching file: ${trimmedUrl}`;
                         });
                     promises.push(promise);  // Add the promise to the array
                 });
 
                 // Once all images have been fetched, generate the ZIP file
                 Promise.all(promises).then(() => {
+                    console.log("All images fetched, generating ZIP file...");
                     zip.generateAsync({ type: "blob" }).then(function(content) {
                         const zipLink = document.createElement('a');
                         zipLink.href = URL.createObjectURL(content);
@@ -43,7 +57,11 @@
                         document.body.appendChild(zipLink);
                         zipLink.click();  // Trigger the download
                         zipLink.remove();
+                        document.getElementById('status').textContent = 'Download complete!';
                     });
+                }).catch(error => {
+                    console.error("Error generating ZIP file:", error);
+                    document.getElementById('status').textContent = 'Error generating ZIP file';
                 });
             } else {
                 document.getElementById('status').textContent = 'No image URLs provided.';
